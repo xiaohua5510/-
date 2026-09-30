@@ -35,7 +35,7 @@ on:
     #   "15 * * * *"     → 每小时第15分钟 / minute 15 every hour
     #   "30 0-14 * * *"  → 北京时间 8:00-22:00 每小时第30分钟 / Beijing 8am-10pm
     #
-    - cron: "33 * * * *"
+    - cron: "0 23 * * * *"
 
   workflow_dispatch:
 
@@ -136,10 +136,10 @@ jobs:
       - name: Run crawler
         if: success()
         env:
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+            FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          DINGTALK_WEBHOOK_URL: ${{ secrets.DINGTALK_WEBHOOK_URL }}
+          DINGTALK_WEBHOOK_URL: ${{ secrets.DINGTALK_WEBHOOK }}
           WEWORK_WEBHOOK_URL: ${{ secrets.WEWORK_WEBHOOK_URL }}
           WEWORK_MSG_TYPE: ${{ secrets.WEWORK_MSG_TYPE }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
@@ -156,17 +156,18 @@ jobs:
           GENERIC_WEBHOOK_URL: ${{ secrets.GENERIC_WEBHOOK_URL }}
           GENERIC_WEBHOOK_TEMPLATE: ${{ secrets.GENERIC_WEBHOOK_TEMPLATE }}
           # AI 配置（ai_analysis 和 ai_translation 共享模型配置）
-          AI_ANALYSIS_ENABLED: ${{ secrets.AI_ANALYSIS_ENABLED }}
-          AI_API_KEY: ${{ secrets.AI_API_KEY }}
-          AI_MODEL: ${{ secrets.AI_MODEL }}
-          AI_API_BASE: ${{ secrets.AI_API_BASE }}
-          # 远程存储配置
-          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
-          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
-          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
-          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
-          S3_REGION: ${{ secrets.S3_REGION }}
+          AI_ANALYSIS_ENABLED: true
+          AI_API_KEY: ${{ secrets.LLM_API_KEY }}
+          AI_MODEL: deepseek-chat
+          AI_API_BASE: ${{ secrets.LLM_BASE_URL }}
+          # 远程存储配置（Cloudflare R2）
+          S3_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          S3_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          S3_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT }}
+          S3_REGION: auto
           GITHUB_ACTIONS: true
+          
         run: uv run python -m trendradar
 
       # --------------------------------------------------------------------------------
