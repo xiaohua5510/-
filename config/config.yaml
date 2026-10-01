@@ -1,5 +1,8 @@
-# TrendRadar 配置文件 - 浙江省考时政新闻采集
+# TrendRadar 配置文件 - 浙江省考时政新闻采集（仅DeepSeek，无R2）
 timezone: Asia/Shanghai
+
+# 关键词设置为空数组：不做关键词过滤，抓到的全部时政新闻保留
+keywords: []
 
 # RSS 新闻源配置
 rss:
@@ -18,23 +21,22 @@ rss:
       name: 浙江气象预警
       url: https://zj.cma.gov.cn/rss.xml
 
-# AI 大模型配置（已经对接DeepSeek，无需修改）
+# AI分析开启
+ai_analysis:
+  enabled: true
+
+# AI 大模型配置 DeepSeek
 llm:
   enabled: true
-  api_base: "${{ secrets.LLM_BASE_URL }}"
+  api_base: "https://api.deepseek.com"
   api_key: "${{ secrets.LLM_API_KEY }}"
   model: deepseek-chat
 
-# 存储配置，使用Cloudflare R2
+# 存储改成本地，不使用Cloudflare R2！
 storage:
-  type: s3
-  s3:
-    endpoint: "${{ secrets.R2_ENDPOINT }}"
-    access_key_id: "${{ secrets.R2_ACCESS_KEY_ID }}"
-    secret_access_key: "${{ secrets.R2_SECRET_ACCESS_KEY }}"
-    bucket: "${{ secrets.R2_BUCKET_NAME }}"
+  type: local
 
-# 推送设置：钉钉（可选，不需要就把enabled改成false）
+# 推送设置：钉钉
 notify:
   dingtalk:
     enabled: false
