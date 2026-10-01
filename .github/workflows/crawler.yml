@@ -109,7 +109,7 @@ jobs:
       - name: DingTalk Notify
         if: always()
         run: |
-          GITHUB_PAGE_URL="https://xiaohua5510.github.io/你的仓库名/"
+          GITHUB_PAGE_URL="https://xiaohua5510.github.io/trendradar/"
           if [[ ${{job.status}} == "success" ]];then
             MSG="Get Hot News 任务执行成功\n仓库：${{github.repository}}\n分支：${{github.ref_name}}\n运行链接：${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}\n新闻页面：${GITHUB_PAGE_URL}"
           else
