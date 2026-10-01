@@ -7,7 +7,8 @@ concurrency:
   group: ${{github.ref_name}}
   cancel-in-progress: true
 permissions:
-  contents: read
+  contents: write
+  pages: write
   actions: write
 jobs:
   crawl:
@@ -87,7 +88,6 @@ jobs:
           AI_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           GITHUB_ACTIONS: true
         run: uv run python -m trendradar
-
       - name: Prepare static assets
         if: success()
         run: |
@@ -98,14 +98,14 @@ jobs:
           rm -rf cloudflare_dist
           mkdir -p cloudflare_dist
           cp index.html cloudflare_dist/index.html
-
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ github.token }}
           publish_dir: ./cloudflare_dist
           publish_branch: gh-pages
-
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
       - name: DingTalk Notify
         if: always()
         run: |
