@@ -3,50 +3,40 @@ on:
   schedule:
     - cron: "0 23 * * *"
   workflow_dispatch:
-
 concurrency:
   group: crawler-${{github.ref_name}}
   cancel-in-progress: true
-
-
 permissions:
   contents: read
   actions: write
-
 jobs:
   crawl:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
           clean: true
-
       - name: Check Expiration
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           WORKFLOW_FILE="crawler.yml"
           API_URL="repos/${{ github.repository }}/actions/workflows/$WORKFLOW_FILE/runs"
-
           TOTAL=$(gh api "$API_URL" --jq '.total_count')
           if [ -z "$TOTAL" ] || [ "$TOTAL" -eq 0 ]; then
             echo "No previous runs found, skipping expiration check"
             exit 0
           fi
-
           LAST_PAGE=$(( (TOTAL + 99) / 100 ))
           FIRST_RUN_DATE=$(gh api "$API_URL?per_page=100&page=$LAST_PAGE" --jq '.workflow_runs[-1].created_at')
-
           if [ -n "$FIRST_RUN_DATE" ]; then
             CURRENT_TIMESTAMP=$(date +%s)
             FIRST_RUN_TIMESTAMP=$(date -d "$FIRST_RUN_DATE" +%s)
             DIFF_SECONDS=$((CURRENT_TIMESTAMP - FIRST_RUN_TIMESTAMP))
             LIMIT_SECONDS=604800
-
             if [ $DIFF_SECONDS -gt $LIMIT_SECONDS ]; then
               echo "⚠️ 试用期已结束，请运行 'Check In' 签到续期"
               echo "⚠️ Trial expired. Run 'Check In' to renew."
@@ -58,39 +48,17 @@ jobs:
               echo "✅ Trial: ${DAYS_LEFT} days left. Run 'Check In' before expiry to renew."
             fi
           fi
-
-
-      # --------------------------------------------------------------------------------
-      # 🚦 TRAFFIC CONTROL / 流量控制
-      # --------------------------------------------------------------------------------
-      # EN: Generates a random delay between 1 and 300 seconds (5 minutes).
-      #     Critical for load balancing.
-      #
-      # CN: 生成 1 到 300 秒（5分钟）之间的随机延迟。
-      #     这对负载均衡至关重要。
-      # - name: Random Delay (Traffic Control)
-      #   if: success()
-      #   run: |
-      #     echo "🎲 Traffic Control: Generating random delay..."
-      #     DELAY=$(( ( RANDOM % 300 )  + 1 ))
-      #     echo "⏸️  Sleeping for ${DELAY} seconds to spread the load..."
-      #     sleep ${DELAY}s
-      #     echo "▶️  Delay finished. Starting crawler..."
-
       - name: Set up Python
         if: success()
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-
       - name: Install uv
         if: success()
         uses: astral-sh/setup-uv@v7
-
       - name: Install dependencies
         if: success()
         run: uv sync --frozen --no-dev
-
       - name: Verify required files
         if: success()
         run: |
@@ -98,7 +66,6 @@ jobs:
             echo "Error: Config missing"
             exit 1
           fi
-
       - name: Run crawler
         if: success()
         env:
@@ -126,68 +93,42 @@ jobs:
           AI_API_KEY: ${{ secrets.LLM_API_KEY }}
           AI_MODEL: deepseek-chat
           AI_API_BASE: ${{ secrets.LLM_BASE_URL }}
-          # 远程存储配置（Cloudflare R2）
-          S3_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
-          S3_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          S3_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          S3_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT }}
-          S3_REGION: auto
           GITHUB_ACTIONS: true
-          
         run: uv run python -m trendradar
 
-      # --------------------------------------------------------------------------------
-      # ☁️ CLOUDFLARE PAGES DEPLOY / 部署到 Cloudflare Pages（可选）
-      # --------------------------------------------------------------------------------
-      # 将爬虫生成的 index.html 自动部署到 Cloudflare Pages，国内访问比 GitHub Pages 更快。
-      # 仅当下面三个 Secrets 均已配置时才会执行，缺任意一个则自动跳过，不影响其它流程：
-      #   - CLOUDFLARE_API_TOKEN     权限：Account → Cloudflare Pages → Edit
-      #   - CLOUDFLARE_ACCOUNT_ID    Cloudflare 账户 ID
-      #   - CLOUDFLARE_PROJECT_NAME  Cloudflare Pages 项目名（需提前在 Dashboard 创建）
-      # 配置教程详见 README「自动部署到 Cloudflare Pages」章节。
-      # --------------------------------------------------------------------------------
-      - name: Check Cloudflare config
+      # ===== 准备静态网页文件 =====
+      - name: Prepare static assets
         if: success()
-        id: cf_check
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
-        run: |
-          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && [ -n "$CLOUDFLARE_PROJECT_NAME" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-            echo "✅ 检测到 Cloudflare 配置，准备部署到 Cloudflare Pages"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "ℹ️ 未配置 Cloudflare Secrets，跳过 Cloudflare Pages 部署"
-          fi
-
-      - name: Prepare Cloudflare Pages assets
-        if: success() && steps.cf_check.outputs.enabled == 'true'
         run: |
           if [ ! -f index.html ]; then
-            echo "❌ 未找到 index.html，请确认爬虫已生成网页报告"
+            echo "❌ 未找到 index.html，请确认爬虫生成网页"
             exit 1
           fi
           rm -rf cloudflare_dist
           mkdir -p cloudflare_dist
           cp index.html cloudflare_dist/index.html
 
-      - name: Deploy to Cloudflare Pages
-        if: success() && steps.cf_check.outputs.enabled == 'true'
-        uses: cloudflare/wrangler-action@v3
+      # ===== 部署到 Gitee Pages =====
+      - name: Deploy to Gitee Pages
+        if: success()
+        uses: yanglbme/gitee-pages-action@main
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy cloudflare_dist --project-name=${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+          gitee-username: xiao-huak
+          gitee-password: ${{ secrets.GITEE_PASSWORD }}
+          gitee-repo: github新闻推送
+          branch: master
+          folder: cloudflare_dist
+
+      # ===== 钉钉通知 =====
       - name: DingTalk Notify
         if: always()
         run: |
+          GITEE_PAGE_URL="https://胡云流星.gitee.io/github新闻推送"
           if [[ ${{job.status}} == "success" ]];then
-            MSG="Get Hot News 任务执行成功\n仓库：${{github.repository}}\n分支：${{github.ref_name}}\n运行链接：${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+            MSG="Get Hot News 任务执行成功\n仓库：${{github.repository}}\n分支：${{github.ref_name}}\n运行链接：${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}\n新闻页面：${GITEE_PAGE_URL}"
           else
             MSG="Get Hot News 任务执行失败\n仓库：${{github.repository}}\n分支：${{github.ref_name}}\n运行链接：${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
           fi
-          curl '${{secrets.DINGTALK_WEBHOOK}}' \
+          curl -s '${{secrets.DINGTALK_WEBHOOK}}' \
             -H 'Content-Type: application/json' \
             -d "{\"msgtype\":\"text\",\"text\":{\"content\":\"GitHub\n$MSG\"}}"
