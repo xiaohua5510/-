@@ -115,9 +115,10 @@ jobs:
         with:
           gitee-username: xiao-huak
           gitee-password: ${{ secrets.GITEE_PASSWORD }}
-          gitee-repo: github新闻推送
+          gitee-repo: github-news-updates
           branch: master
-          folder: cloudflare_dist
+          directory: cloudflare_dist
+
 
       # ===== 钉钉通知 =====
       - name: DingTalk Notify
