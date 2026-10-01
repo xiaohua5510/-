@@ -184,15 +184,10 @@ jobs:
         if: always()
         run: |
           if [[ ${{job.status}} == "success" ]];then
-            MSG="✅ Get Hot News 任务执行成功\n仓库：${{github.repository}}\n分支：${{github.ref_name}}\n运行链接：${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+            MSG="Get Hot News 任务执行成功\n仓库：${{github.repository}}\n分支：${{github.ref_name}}\n运行链接：${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
           else
-            MSG="❌ Get Hot News 任务执行失败\n仓库：${{github.repository}}\n分支：${{github.ref_name}}\n运行链接：${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+            MSG="Get Hot News 任务执行失败\n仓库：${{github.repository}}\n分支：${{github.ref_name}}\n运行链接：${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
           fi
           curl '${{secrets.DINGTALK_WEBHOOK}}' \
             -H 'Content-Type: application/json' \
-            -d '{
-              "msgtype": "text",
-              "text": {
-                "content": "GitHub\n'"$MSG"'"
-              }
-            }'
+            -d "{\"msgtype\":\"text\",\"text\":{\"content\":\"GitHub\n$MSG\"}}"
