@@ -109,15 +109,12 @@ jobs:
           cp index.html cloudflare_dist/index.html
 
       # ===== 部署到 Gitee Pages =====
-      - name: Deploy to Gitee Pages
-        if: success()
-        uses: yanglbme/gitee-pages-action@main
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          gitee-username: xiao-huak
-          gitee-password: ${{ secrets.GITEE_PASSWORD }}
-          gitee-repo: github-news-updates
-          branch: master
-          directory: cloudflare_dist
+          github_token: ${{ github.TOKEN }}
+          publish_dir: ./cloudflare_dist
+
 
 
       # ===== 钉钉通知 =====
